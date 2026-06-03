@@ -1,8 +1,7 @@
-x = 2 + 3
-y = 3
-z = x + y
-z
+x = 5;
 
-
-
-
+if (x) {
+    console.log(x);
+} else {
+    y = 10;
+}

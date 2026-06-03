@@ -1,29 +1,58 @@
 grammar Calculator;
 
-//Gramatica
-prog: stat+;
 
-stat: expr NEWLINE?              #printExpr
-    | ID EQ expr NEWLINE?        #assign
-    | NEWLINE                   #blank
+program
+    : statement* EOF
     ;
 
-expr: expr op=(MUL|DIV) expr    #MulDiv
-    | expr op=(ADD|SUB) expr    #AddSub
-    | INT                       #int
-    | ID                        #id
-    | LPAREN expr RPAREN        #parens
+statement
+    : ifStatement
+    | assignmentStatement
+    | consoleStatement
     ;
 
-//Lexemas
-MUL : '*';
-DIV : '/';
-ADD : '+';
-SUB : '-';
-EQ: '=';
-ID : [a-zA-Z]+;
-INT : [0-9];
-LPAREN : '(';
-RPAREN : ')';
-NEWLINE:'\r'? '\n';
-WS: [ \t]+ -> skip;
+ifStatement
+    : 'if' '(' expression ')' block ('else' block)?
+    ;
+
+block
+    : '{' statement* '}'
+    ;
+
+assignmentStatement
+    : Identifier '=' expression ';'
+    ;
+
+consoleStatement
+    : 'console' '.' 'log' '(' expression ')' ';'
+    ;
+
+expression
+    : term (('+' | '-') term)*
+    ;
+
+term
+    : Identifier
+    | Number
+    | '(' expression ')'
+    ;
+
+Identifier
+    : Letter (Letter | Digit | '_')*
+    ;
+
+Number
+    : Digit+
+    ;
+
+fragment Letter
+    : [a-zA-Z]
+    ;
+
+fragment Digit
+    : [0-9]
+    ;
+
+WS
+    : [ \t\r\n]+ -> skip
+    ;

@@ -1,62 +1,87 @@
 import CalculatorLexer from "./generated/CalculatorLexer.js";
 import CalculatorParser from "./generated/CalculatorParser.js";
-import { CustomCalculatorListener } from "./CustomCalculatorListener.js";
 import { CustomCalculatorVisitor } from "./CustomCalculatorVisitor.js";
-import antlr4, { CharStreams, CommonTokenStream, ParseTreeWalker } from "antlr4";
-import readline from 'readline';
+import antlr4 from "antlr4";
+const { CharStreams, CommonTokenStream } = antlr4;
 import fs from 'fs';
+
+class CollectingErrorListener extends antlr4.error.ErrorListener {
+    constructor() {
+        super();
+        this.errors = [];
+    }
+
+    syntaxError(recognizer, offendingSymbol, line, column, msg) {
+        this.errors.push({ line, column, msg, symbol: offendingSymbol?.text });
+    }
+}
+
+function tokenName(token) {
+    return CalculatorLexer.symbolicNames[token.type] || CalculatorLexer.literalNames[token.type] || `Token(${token.type})`;
+}
+
+function printTokenTable(tokens) {
+    console.log("\nTabla de léxemas y tokens:");
+    console.log("Línea:Col\tLexema\tToken");
+    for (const token of tokens) {
+        if (token.type === antlr4.Token.EOF || token.type === CalculatorLexer.WS) {
+            continue;
+        }
+        console.log(`${token.line}:${token.column}\t${token.text}\t${tokenName(token)}`);
+    }
+}
 
 async function main() {
     let input;
 
-    // Intento leer la entrada desde el archivo input - en forma sincrona.
     try {
         input = fs.readFileSync('input.txt', 'utf8');
     } catch (err) {
-        // Si no es posible leer el archivo, solicitar la entrada del usuario por teclado
-        input = await leerCadena(); // Simula lectura síncrona
-        console.log(input);
+        console.error("No se encontró input.txt en el directorio actual.");
+        return;
     }
 
-    // Proceso la entrada con el analizador e imprimo el arbol de analisis en formato texto
-    let inputStream = CharStreams.fromString(input);
-    let lexer = new CalculatorLexer(inputStream);
-    let tokenStream = new CommonTokenStream(lexer);
-    let parser = new CalculatorParser(tokenStream);
-    let tree = parser.prog();
-    
-    // Verifico si se produjeron errores
-    if (parser.syntaxErrorsCount > 0) {
-        console.error("\nSe encontraron errores de sintaxis en la entrada.");
-    } 
-    else {
-        console.log("\nEntrada válida.");
-        const cadena_tree = tree.toStringTree(parser.ruleNames);
-        console.log(`Árbol de derivación: ${cadena_tree}`);
+    console.log("Entrada original:");
+    console.log(input.trim());
 
-        // Utilizo un listener y un walker para recorrer el arbol e indicar cada vez que reconoce una sentencia (stat)
-        //const listener = new CustomCalculatorListener();
-        // ParseTreeWalker.DEFAULT.walk(listener, tree);
+    const inputStream = CharStreams.fromString(input);
+    const lexer = new CalculatorLexer(inputStream);
+    const tokenStream = new CommonTokenStream(lexer);
+    tokenStream.fill();
 
-        // Utilizo un visitor para visitar los nodos que me interesan de mi arbol
-        const visitor = new CustomCalculatorVisitor();
-        visitor.visit(tree);   
-    }
-}
+    printTokenTable(tokenStream.getTokens());
 
-function leerCadena() {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
+    const parser = new CalculatorParser(tokenStream);
+    parser.removeErrorListeners();
+    const syntaxErrors = new CollectingErrorListener();
+    parser.addErrorListener(syntaxErrors);
 
-    return new Promise(resolve => {
-        rl.question("Ingrese una cadena: ", (answer) => {
-            rl.close();
-            resolve(answer);
+    const tree = parser.program();
+
+    if (syntaxErrors.errors.length > 0) {
+        console.error("\nSe encontraron errores de sintaxis:");
+        syntaxErrors.errors.forEach(err => {
+            console.error(`  Línea ${err.line}, columna ${err.column}: ${err.msg}`);
         });
-    });
+        return;
+    }
+
+    console.log("\nEntrada válida.");
+    console.log("\nÁrbol de análisis sintáctico:");
+    console.log(tree.toStringTree(parser.ruleNames));
+
+    console.log("\nCódigo equivalente en JavaScript:");
+    console.log(input.trim());
+
+    const visitor = new CustomCalculatorVisitor();
+    visitor.visit(tree);
+
+    console.log("\nInterpretación / ejecución simulada:");
+    if (visitor.output.length === 0) {
+        console.log("(No se produjo ninguna salida de console.log en el programa.)");
+    } else {
+        visitor.output.forEach(line => console.log(line));
+    }
 }
 
-// Ejecuta la función principal
 main();
