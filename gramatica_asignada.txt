@@ -1,0 +1,23 @@
+Program ::= { Statement }
+
+Statement ::= IfStatement | AssignmentStatement | ConsoleStatement
+
+IfStatement ::= "if" "(" Expression ")" Block [ "else" Block ]
+
+Block ::= "{" { Statement } "}"
+
+AssignmentStatement ::= Identifier "=" Expression ";"
+
+ConsoleStatement ::= "console" "." "log" "(" Expression ")" ";"
+
+Expression ::= Term { ("+" | "-") Term }
+
+Term ::= Identifier | Number | "(" Expression ")"
+
+Identifier ::= letter { letter | digit | "_" }
+
+Number ::= digit { digit }
+
+letter ::= "a" | ... | "z" | "A" | ... | "Z"
+
+digit ::= "0" | ... | "9"
